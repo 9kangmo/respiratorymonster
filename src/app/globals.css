@@ -12,6 +12,8 @@
   --danger: #dc2626;
   --warn: #d97706;
   --ok: #059669;
+  --up: #dc2626;
+  --down: #2563eb;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -27,6 +29,8 @@
     --danger: #f87171;
     --warn: #fbbf24;
     --ok: #34d399;
+    --up: #f87171;
+    --down: #60a5fa;
   }
 }
 
@@ -42,6 +46,8 @@
   --color-danger: var(--danger);
   --color-warn: var(--warn);
   --color-ok: var(--ok);
+  --color-up: var(--up);
+  --color-down: var(--down);
   --font-sans: "Pretendard", "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", system-ui, sans-serif;
 }
 

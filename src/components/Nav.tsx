@@ -7,6 +7,7 @@ const LINKS = [
   { href: "/", label: "대시보드" },
   { href: "/projects", label: "프로젝트" },
   { href: "/calendar", label: "캘린더" },
+  { href: "/market", label: "투자" },
   { href: "/settings", label: "설정" },
 ];
 

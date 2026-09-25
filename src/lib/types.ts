@@ -52,13 +52,37 @@ export interface Settings {
   hiddenCalendarIds?: string[];
 }
 
+export interface Holding {
+  id: string;
+  name: string;
+  /** Yahoo Finance symbol, e.g. 005930.KS, 247540.KQ, AAPL. */
+  symbol: string;
+  quantity?: number;
+  /** Average purchase price in the quote currency. */
+  avgPrice?: number;
+  /** News search query; defaults to the name. */
+  keywords?: string;
+  createdAt: string;
+}
+
+export type Sentiment = "긍정" | "중립" | "부정";
+
+export interface Briefing {
+  createdAt: string;
+  overview: string;
+  macro: string;
+  holdings: { holdingId: string; sentiment: Sentiment; summary: string; points: string[] }[];
+}
+
 export interface DB {
   version: 1;
   projects: Project[];
   tasks: Task[];
+  holdings: Holding[];
+  briefing?: Briefing;
   settings: Settings;
 }
 
 export function emptyDB(): DB {
-  return { version: 1, projects: [], tasks: [], settings: {} };
+  return { version: 1, projects: [], tasks: [], holdings: [], settings: {} };
 }

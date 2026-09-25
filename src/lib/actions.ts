@@ -7,7 +7,10 @@ import { errorMessage, getCtx, mutateDB, rethrowControl } from "./context";
 import { zonedToUtc, addMinutesLocal, addDays } from "./dates";
 import { insertEvent, listCalendars } from "./google/calendar";
 import { dropTaskEvent, newId, pushTask, syncAll, type SyncReport } from "./sync";
-import type { Priority, Project, ProjectStatus, Task, TaskKind, TaskStatus } from "./types";
+import { generateBriefing } from "./market/briefing";
+import { loadIndicators } from "./market/indicators";
+import { loadHoldings, loadMacroNews, normalizeSymbol } from "./market/portfolio";
+import type { Holding, Priority, Project, ProjectStatus, Task, TaskKind, TaskStatus } from "./types";
 
 const str = (fd: FormData, key: string) => String(fd.get(key) ?? "").trim();
 const opt = (fd: FormData, key: string) => str(fd, key) || undefined;
@@ -235,4 +238,60 @@ export async function createCalendarEvent(fd: FormData) {
       : { date: addDays(date, 1) },
   });
   done();
+}
+
+// ---------- holdings & briefing ----------
+
+const num = (fd: FormData, key: string) => {
+  const n = Number(str(fd, key).replace(/,/g, ""));
+  return str(fd, key) && Number.isFinite(n) && n >= 0 ? n : undefined;
+};
+
+export async function saveHolding(fd: FormData) {
+  const ctx = await getCtx();
+  const name = str(fd, "name");
+  const symbol = normalizeSymbol(str(fd, "symbol"));
+  if (!name || !symbol) return;
+  const id = str(fd, "id");
+  await mutateDB(ctx, (db) => {
+    const existing = id ? db.holdings.find((h) => h.id === id) : undefined;
+    const holding: Holding = existing ?? { id: newId(), name, symbol, createdAt: new Date().toISOString() };
+    holding.name = name;
+    holding.symbol = symbol;
+    holding.quantity = num(fd, "quantity");
+    holding.avgPrice = num(fd, "avgPrice");
+    holding.keywords = opt(fd, "keywords");
+    if (!existing) db.holdings.push(holding);
+  });
+  revalidatePath("/market");
+  redirect("/market");
+}
+
+export async function deleteHolding(fd: FormData) {
+  const ctx = await getCtx();
+  const id = str(fd, "id");
+  await mutateDB(ctx, (db) => {
+    db.holdings = db.holdings.filter((h) => h.id !== id);
+    if (db.briefing) db.briefing.holdings = db.briefing.holdings.filter((h) => h.holdingId !== id);
+  });
+  revalidatePath("/market");
+  redirect("/market");
+}
+
+export async function refreshBriefing(): Promise<{ ok: true } | { ok: false; error: string }> {
+  const ctx = await getCtx();
+  if (!config.aiBriefing) return { ok: false, error: "ANTHROPIC_API_KEY가 설정되지 않았습니다." };
+  try {
+    const { holdings } = await ctx.store.load();
+    const [views, indicators, macro] = await Promise.all([loadHoldings(holdings), loadIndicators(), loadMacroNews()]);
+    const briefing = await generateBriefing(views, indicators, macro.news);
+    await mutateDB(ctx, (db) => {
+      db.briefing = briefing;
+    });
+    revalidatePath("/market");
+    return { ok: true };
+  } catch (err) {
+    rethrowControl(err);
+    return { ok: false, error: errorMessage(err) };
+  }
 }

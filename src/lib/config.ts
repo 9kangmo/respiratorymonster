@@ -17,6 +17,10 @@ export const config = {
   storage: (process.env.STORAGE ?? (process.env.VERCEL ? "drive" : "file")) as "file" | "drive",
   dataDir: process.env.DATA_DIR ?? ".data",
   timeZone: process.env.TIMEZONE ?? "Asia/Seoul",
+  /** Bank of Korea ECOS Open API key (free) for the Korean base rate and 10-year KTB yield. */
+  ecosApiKey: process.env.ECOS_API_KEY ?? "",
+  /** Enables AI news briefings; the Anthropic SDK reads the key itself. */
+  aiBriefing: Boolean(process.env.ANTHROPIC_API_KEY),
 };
 
 export function assertConfigured(): string[] {

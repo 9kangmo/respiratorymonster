@@ -101,3 +101,8 @@ export function relativeLabel(date: string, today: string): string {
 }
 
 export { WEEKDAYS };
+
+/** Current time in epoch ms (kept out of components so renders stay lint-pure). */
+export function nowMs(): number {
+  return Date.now();
+}
