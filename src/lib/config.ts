@@ -17,6 +17,15 @@ export const config = {
   storage: (process.env.STORAGE ?? (process.env.VERCEL ? "drive" : "file")) as "file" | "drive",
   dataDir: process.env.DATA_DIR ?? ".data",
   timeZone: process.env.TIMEZONE ?? "Asia/Seoul",
+  /** Local mode: folder where Claude Code skills drop research bundles for auto-import. */
+  investInboxDir: process.env.INVEST_INBOX_DIR ?? "invest-inbox",
+  /** Optional: enables in-app Claude runs (web search). Without it, research comes from Claude Code skills. */
+  anthropicApiKey: process.env.ANTHROPIC_API_KEY ?? "",
+  anthropicModel: process.env.ANTHROPIC_MODEL ?? "claude-opus-5",
+  /** Set by Vercel; cron requests carry `Authorization: Bearer <CRON_SECRET>`. */
+  cronSecret: process.env.CRON_SECRET ?? "",
+  /** Sealed account key that lets the scheduled brief act for the owner (see /invest/import). */
+  investCronToken: process.env.INVEST_CRON_TOKEN ?? "",
 };
 
 export function assertConfigured(): string[] {
