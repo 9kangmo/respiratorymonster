@@ -55,7 +55,9 @@ export interface RunOutput {
 }
 
 /** Runs one skill with web search and returns the final text (which should end in the JSON bundle). */
-export async function runSkill(skill: SkillId | "refresh", context: string): Promise<RunOutput> {
+export type Effort = "low" | "medium" | "high";
+
+export async function runSkill(skill: SkillId | "refresh", context: string, effort: Effort = "high"): Promise<RunOutput> {
   const client = new Anthropic({ apiKey: config.anthropicApiKey });
   const model = config.anthropicModel;
   const messages: Anthropic.Beta.BetaMessageParam[] = [
@@ -74,7 +76,7 @@ export async function runSkill(skill: SkillId | "refresh", context: string): Pro
       system: SYSTEM,
       messages,
       thinking: { type: "adaptive" },
-      output_config: { effort: "high" },
+      output_config: { effort },
       tools: [{ type: "web_search_20260209", name: "web_search", max_uses: 20 }],
       ...fallback,
     });

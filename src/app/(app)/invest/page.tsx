@@ -41,6 +41,11 @@ export default async function DailyBrief() {
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold">{formatDate(today)} 브리핑</h1>
+          {db.autoRun && !db.autoRun.ok && (
+            <p className="text-sm text-danger">
+              자동 브리핑 실패 ({new Date(db.autoRun.at).toLocaleString("ko-KR", { timeZone: config.timeZone, dateStyle: "short", timeStyle: "short" })}): {db.autoRun.message}
+            </p>
+          )}
           <p className="text-sm text-muted">
             마지막 갱신: {db.lastRefreshAt ? new Date(db.lastRefreshAt).toLocaleString("ko-KR", { timeZone: config.timeZone, dateStyle: "medium", timeStyle: "short" }) : "없음"}
           </p>

@@ -1,13 +1,10 @@
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
-import { config } from "@/lib/config";
 import { errorMessage, getCtx, rethrowControl } from "@/lib/context";
-import { todayIn } from "@/lib/dates";
-import { applyBundle, extractBundleJson, normalizeTicker, summarizeImport } from "@/lib/invest/bundle";
-import { portfolioMetrics } from "@/lib/invest/calc";
-import { apiEnabled, buildContext, describeApiError, runSkill } from "@/lib/invest/claude";
+import { normalizeTicker } from "@/lib/invest/bundle";
+import { apiEnabled, describeApiError } from "@/lib/invest/claude";
+import { runAndIngest, summarizeImport } from "@/lib/invest/runner";
 import { SKILLS } from "@/lib/invest/skills";
-import { mutateInvest, readInvest } from "@/lib/invest/store";
 import type { SkillId } from "@/lib/invest/types";
 
 // Web-search runs take minutes.
@@ -24,23 +21,9 @@ export async function POST(request: Request) {
   if (SKILLS[skill].needsTicker && !ticker) return NextResponse.json({ ok: false, error: "종목 코드가 필요합니다." }, { status: 400 });
 
   try {
-    const db = await readInvest(ctx);
-    const today = todayIn(config.timeZone);
-    const context = buildContext(db, portfolioMetrics(db.holdings, db.quotes, db.fx), today, ticker);
-    const { text } = await runSkill(skill, context);
-
-    let bundle: unknown;
-    const warnings: string[] = [];
-    try {
-      bundle = extractBundleJson(text);
-    } catch {
-      // Keep the analysis rather than losing a paid run; flag that numbers were not imported.
-      warnings.push("응답에서 JSON 번들을 찾지 못해 본문만 리포트로 저장했습니다. 숫자는 반영되지 않았습니다.");
-      bundle = skill === "refresh" ? {} : { reports: [{ ticker, skill, title: `${ticker ?? ""} ${SKILLS[skill].label}`.trim(), markdown: text, sources: [] }] };
-    }
-    const result = await mutateInvest(ctx, (d) => applyBundle(d, bundle, "api"));
+    const result = await runAndIngest(ctx, skill, ticker);
     revalidatePath("/invest", "layout");
-    return NextResponse.json({ ok: true, summary: summarizeImport(result), warnings: [...warnings, ...result.warnings] });
+    return NextResponse.json({ ok: true, summary: summarizeImport(result), warnings: result.warnings });
   } catch (err) {
     rethrowControl(err);
     return NextResponse.json({ ok: false, error: describeApiError(err) || errorMessage(err) }, { status: 502 });

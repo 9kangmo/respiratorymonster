@@ -164,6 +164,8 @@ export interface InvestDB {
   reports: Report[];
   valuations: Valuation[];
   lastRefreshAt?: string;
+  /** Result of the latest scheduled (cron) run. */
+  autoRun?: { at: string; ok: boolean; message: string };
 }
 
 export function emptyInvestDB(): InvestDB {

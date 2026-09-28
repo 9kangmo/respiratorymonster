@@ -6,6 +6,7 @@ import { errorMessage, getCtx, mutateDB, rethrowControl } from "../context";
 import { newId, pushTask } from "../sync";
 import type { Project, Task } from "../types";
 import { applyBundle, extractBundleJson, normalizeTicker, parseConstituents, parseValuationInputs, summarizeImport } from "./bundle";
+import { sealCronKey } from "./runner";
 import { mutateInvest, readInvest } from "./store";
 import { ASSET_LABEL, type AssetType, type Currency, type EventType, type Holding } from "./types";
 
@@ -270,4 +271,12 @@ export async function saveValuation(fd: FormData) {
     db.valuations.push({ id: crypto.randomUUID(), ticker, inputs, origin: "manual", createdAt: new Date().toISOString() });
   });
   done();
+}
+
+// ---------- scheduled brief ----------
+
+/** Creates the INVEST_CRON_TOKEN value for the signed-in owner. Shown once; never stored by the app. */
+export async function makeCronKey(): Promise<string> {
+  const ctx = await getCtx();
+  return sealCronKey(ctx.session.email, ctx.session.refreshToken);
 }

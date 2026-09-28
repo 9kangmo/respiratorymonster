@@ -41,6 +41,20 @@
    역DCF 같은 계산은 스킬도 `npm run -s invest -- dcf <번들>`로 앱과 같은 코드를 돌립니다.
 2. **앱에서 바로 실행 (선택, API 과금)** — `ANTHROPIC_API_KEY`를 설정하면 각 화면의 실행 버튼이 Claude API + 웹 검색으로 같은 스킬을 돌립니다 (`ANTHROPIC_MODEL`, 기본 `claude-opus-5`).
 
+### 폰으로 매일 아침 자동 브리핑 받기
+
+앱을 Vercel에 배포하면 폰 브라우저로 열 수 있고, 서버가 **평일 오전 6~7시(한국 시간)**에 브리핑을 만들어 둡니다(`vercel.json`의 cron, `/api/invest/cron`).
+그날 이미 브리핑을 만들었으면 건너뛰어 요금이 두 번 나가지 않습니다. Claude API 사용량만큼 과금됩니다.
+
+1. 아래 [3. 배포](#3-배포-예-vercel-무료)대로 Vercel에 올립니다.
+2. Vercel 환경 변수에 `ANTHROPIC_API_KEY`와 `CRON_SECRET`(`openssl rand -hex 32`)을 추가합니다.
+3. 배포된 앱에 로그인 → **투자 리서치 → 가져오기 · 설정 → 자동 실행 키 만들기** → 복사한 값을 Vercel 환경 변수 `INVEST_CRON_TOKEN`에 넣고 다시 배포합니다.
+   서버가 로그인 없이 내 Google Drive 데이터를 읽고 쓰는 데 필요한 키이고, `SESSION_SECRET`으로 암호화되어 있습니다.
+4. 같은 화면의 체크 항목 4개가 모두 ✓이면 켜진 것입니다. 마지막 자동 실행 결과도 거기에 표시됩니다.
+5. 폰에서 배포 주소를 열고 브라우저 메뉴의 **홈 화면에 추가**를 누르면 앱처럼 쓸 수 있습니다.
+
+시간을 바꾸려면 `vercel.json`의 `schedule`(UTC 기준 cron)을 고칩니다. Vercel 무료 플랜은 지정한 시각의 1시간 안에서 실행됩니다.
+
 ### 한계
 
 - 계좌 연동은 하지 않습니다(자격증명을 다루지 않음). 보유 현황은 콕핏 화면에서 직접 입력합니다.
@@ -81,6 +95,7 @@ npm run dev                  # http://localhost:3000
 
 1. 이 저장소를 Vercel에 가져옵니다.
 2. 환경 변수 `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `SESSION_SECRET`, `ALLOWED_EMAILS`, `APP_URL`을 설정합니다.
+   투자 리서치 자동 브리핑을 쓰려면 `ANTHROPIC_API_KEY`, `CRON_SECRET`, `INVEST_CRON_TOKEN`도 추가합니다 (위 [폰으로 매일 아침 자동 브리핑 받기](#폰으로-매일-아침-자동-브리핑-받기)).
    Vercel에서는 자동으로 `STORAGE=drive`가 되어 데이터가 Google Drive 앱 폴더에 저장됩니다.
 3. Google Cloud의 리디렉션 URI에 `https://<배포 주소>/api/auth/callback`을 추가합니다.
 
