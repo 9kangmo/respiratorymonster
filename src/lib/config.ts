@@ -17,6 +17,11 @@ export const config = {
   storage: (process.env.STORAGE ?? (process.env.VERCEL ? "drive" : "file")) as "file" | "drive",
   dataDir: process.env.DATA_DIR ?? ".data",
   timeZone: process.env.TIMEZONE ?? "Asia/Seoul",
+  /** Local mode: folder where Claude Code skills drop research bundles for auto-import. */
+  investInboxDir: process.env.INVEST_INBOX_DIR ?? "invest-inbox",
+  /** Optional: enables in-app Claude runs (web search). Without it, research comes from Claude Code skills. */
+  anthropicApiKey: process.env.ANTHROPIC_API_KEY ?? "",
+  anthropicModel: process.env.ANTHROPIC_MODEL ?? "claude-opus-5",
 };
 
 export function assertConfigured(): string[] {

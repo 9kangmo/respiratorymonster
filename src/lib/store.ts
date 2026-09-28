@@ -5,9 +5,20 @@ import type { TokenFn } from "./google/api";
 import { createAppDataFile, findAppDataFile, readAppDataFile, updateAppDataFile } from "./google/drive";
 import { emptyDB, type DB } from "./types";
 
-export interface Store {
-  load(): Promise<DB>;
-  save(db: DB): Promise<void>;
+export interface DocStore<T> {
+  load(): Promise<T>;
+  save(doc: T): Promise<void>;
+}
+
+export type Store = DocStore<DB>;
+
+interface DocSpec<T> {
+  /** Suffix of the local file (`<email><suffix>.json`). */
+  fileSuffix: string;
+  /** File name in the Drive appDataFolder. */
+  driveName: string;
+  empty: () => T;
+  parse: (raw: string) => T;
 }
 
 function parse(raw: string): DB {
@@ -15,52 +26,58 @@ function parse(raw: string): DB {
   return { ...emptyDB(), ...data, settings: { ...data.settings } };
 }
 
-function fileStore(email: string): Store {
-  const file = path.resolve(config.dataDir, `${email.replace(/[^a-z0-9@._-]/gi, "_")}.json`);
+function fileStore<T>(email: string, spec: DocSpec<T>): DocStore<T> {
+  const file = path.resolve(config.dataDir, `${email.replace(/[^a-z0-9@._-]/gi, "_")}${spec.fileSuffix}.json`);
   return {
     async load() {
       try {
-        return parse(await readFile(file, "utf8"));
+        return spec.parse(await readFile(file, "utf8"));
       } catch (err) {
-        if ((err as NodeJS.ErrnoException).code === "ENOENT") return emptyDB();
+        if ((err as NodeJS.ErrnoException).code === "ENOENT") return spec.empty();
         throw err;
       }
     },
-    async save(db) {
+    async save(doc) {
       await mkdir(path.dirname(file), { recursive: true });
       const tmp = `${file}.${process.pid}.tmp`;
-      await writeFile(tmp, JSON.stringify(db, null, 2));
+      await writeFile(tmp, JSON.stringify(doc, null, 2));
       await rename(tmp, file);
     },
   };
 }
 
-const DRIVE_FILE = "research-app-data.json";
 const driveFileIds = new Map<string, string>();
 
-function driveStore(email: string, token: TokenFn): Store {
+function driveStore<T>(email: string, token: TokenFn, spec: DocSpec<T>): DocStore<T> {
+  const cacheKey = `${email}:${spec.driveName}`;
   return {
     async load() {
-      const id = driveFileIds.get(email) ?? (await findAppDataFile(token, DRIVE_FILE));
-      if (!id) return emptyDB();
-      driveFileIds.set(email, id);
-      return parse(await readAppDataFile(token, id));
+      const id = driveFileIds.get(cacheKey) ?? (await findAppDataFile(token, spec.driveName));
+      if (!id) return spec.empty();
+      driveFileIds.set(cacheKey, id);
+      return spec.parse(await readAppDataFile(token, id));
     },
-    async save(db) {
-      const content = JSON.stringify(db);
-      const id = driveFileIds.get(email) ?? (await findAppDataFile(token, DRIVE_FILE));
+    async save(doc) {
+      const content = JSON.stringify(doc);
+      const id = driveFileIds.get(cacheKey) ?? (await findAppDataFile(token, spec.driveName));
       if (id) {
         await updateAppDataFile(token, id, content);
-        driveFileIds.set(email, id);
+        driveFileIds.set(cacheKey, id);
       } else {
-        driveFileIds.set(email, await createAppDataFile(token, DRIVE_FILE, content));
+        driveFileIds.set(cacheKey, await createAppDataFile(token, spec.driveName, content));
       }
     },
   };
 }
 
+export function getDocStore<T>(email: string, token: TokenFn, spec: DocSpec<T>): DocStore<T> {
+  return config.storage === "drive" ? driveStore(email, token, spec) : fileStore(email, spec);
+}
+
+const RESEARCH_DOC: DocSpec<DB> = { fileSuffix: "", driveName: "research-app-data.json", empty: emptyDB, parse };
+
 export function getStore(email: string, token: TokenFn): Store {
-  return config.storage === "drive" ? driveStore(email, token) : fileStore(email);
+  return getDocStore(email, token, RESEARCH_DOC);
 }
 
 /** Serialises read-modify-write cycles per user within this server process. */

@@ -43,3 +43,6 @@ next-env.d.ts
 # local data store
 /.data/
 !.env.example
+
+# investment research bundles dropped by Claude Code skills
+/invest-inbox/
